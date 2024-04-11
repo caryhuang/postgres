@@ -1319,7 +1319,6 @@ initialize_SSL(PGconn *conn)
 	/* Read the client certificate file */
 	if (conn->sslcert && strlen(conn->sslcert) > 0 && conn->nsslcert == 1)
 	{
-		printf("using %s\n", conn->sslcert);
 		strlcpy(fnbuf, conn->sslcert, sizeof(fnbuf));
 	}
 	else if (have_homedir)
@@ -1435,7 +1434,6 @@ initialize_SSL(PGconn *conn)
 	 */
 	if (have_cert && conn->sslkey && strlen(conn->sslkey) > 0 && conn->nsslkey == 1)
 	{
-		printf("using %s\n", conn->sslkey);
 #ifdef USE_SSL_ENGINE
 		if (strchr(conn->sslkey, ':')
 #ifdef WIN32
