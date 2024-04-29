@@ -1293,4 +1293,81 @@ SELECT 1 FROM tenk1_vw_sec
                  Filter: (f1 < tenk1_vw_sec.unique1)
 (9 rows)
 
+-- test parallel tid range scan
+EXPLAIN (COSTS OFF)
+SELECT stringu1 FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
+                  QUERY PLAN                   
+-----------------------------------------------
+ Limit
+   ->  Gather
+         Workers Planned: 4
+         ->  Parallel Tid Range Scan on tenk1
+               TID Cond: (ctid > '(0,1)'::tid)
+(5 rows)
+
+SELECT stringu1 FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
+ stringu1 
+----------
+ TUAAAA
+(1 row)
+
+EXPLAIN (COSTS OFF)
+SELECT stringu1 FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
+                   QUERY PLAN                    
+-------------------------------------------------
+ Limit
+   ->  Gather
+         Workers Planned: 4
+         ->  Parallel Tid Range Scan on tenk1
+               TID Cond: (ctid < '(400,1)'::tid)
+(5 rows)
+
+SELECT stringu1 FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
+ stringu1 
+----------
+ MAAAAA
+(1 row)
+
+EXPLAIN (COSTS OFF)
+SELECT stringu1 FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
+                                  QUERY PLAN                                   
+-------------------------------------------------------------------------------
+ Limit
+   ->  Gather
+         Workers Planned: 4
+         ->  Parallel Tid Range Scan on tenk1
+               TID Cond: ((ctid >= '(0,1)'::tid) AND (ctid <= '(400,1)'::tid))
+(5 rows)
+
+SELECT stringu1 FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
+ stringu1 
+----------
+ MAAAAA
+(1 row)
+
+EXPLAIN (COSTS OFF)
+SELECT t.ctid,t2.c FROM tenk1 t,
+LATERAL (SELECT count(*) c FROM tenk1 t2 WHERE t2.ctid <= t.ctid) t2
+WHERE t.ctid < '(1,0)' LIMIT 1;
+                      QUERY PLAN                      
+------------------------------------------------------
+ Limit
+   ->  Nested Loop
+         ->  Gather
+               Workers Planned: 4
+               ->  Parallel Tid Range Scan on tenk1 t
+                     TID Cond: (ctid < '(1,0)'::tid)
+         ->  Aggregate
+               ->  Tid Range Scan on tenk1 t2
+                     TID Cond: (ctid <= t.ctid)
+(9 rows)
+
+SELECT t.ctid,t2.c FROM tenk1 t,
+LATERAL (SELECT count(*) c FROM tenk1 t2 WHERE t2.ctid <= t.ctid) t2
+WHERE t.ctid < '(1,0)' LIMIT 1;
+ ctid  | c 
+-------+---
+ (0,1) | 1
+(1 row)
+
 rollback;

@@ -187,6 +187,35 @@ table_beginscan_parallel(Relation relation, ParallelTableScanDesc pscan)
 											pscan, flags);
 }
 
+TableScanDesc
+table_beginscan_parallel_tidrange(Relation relation, ParallelTableScanDesc pscan,
+								  ItemPointer mintid, ItemPointer maxtid)
+{
+	Snapshot	snapshot;
+	uint32		flags = SO_TYPE_TIDRANGESCAN | SO_ALLOW_PAGEMODE;
+	TableScanDesc sscan;
+
+	Assert(RelationGetRelid(relation) == pscan->phs_relid);
+
+	if (!pscan->phs_snapshot_any)
+	{
+		/* Snapshot was serialized -- restore it */
+		snapshot = RestoreSnapshot((char *) pscan + pscan->phs_snapshot_off);
+		RegisterSnapshot(snapshot);
+		flags |= SO_TEMP_SNAPSHOT;
+	}
+	else
+	{
+		/* SnapshotAny passed by caller (not serialized) */
+		snapshot = SnapshotAny;
+	}
+
+	sscan = relation->rd_tableam->scan_begin(relation, snapshot, 0, NULL,
+											 pscan, flags);
+
+	return sscan;
+}
+
 
 /* ----------------------------------------------------------------------------
  * Index scan related functions.

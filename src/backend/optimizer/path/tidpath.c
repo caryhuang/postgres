@@ -496,7 +496,8 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 
 		add_path(rel, (Path *) create_tidrangescan_path(root, rel,
 														tidrangequals,
-														required_outer));
+														required_outer,
+														0));
 	}
 
 	/*
@@ -525,4 +526,32 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 	 * join quals, for example.
 	 */
 	BuildParameterizedTidPaths(root, rel, rel->joininfo);
+}
+
+Path *
+create_tidrangescan_subpaths(PlannerInfo *root, RelOptInfo *rel, int parallel_workers)
+{
+	List	   *tidrangequals;
+	Path	   *path;
+	/*
+	 * If there are range quals in the baserestrict list, generate a
+	 * TidRangePath.
+	 */
+	tidrangequals = TidRangeQualFromRestrictInfoList(rel->baserestrictinfo,
+													 rel);
+
+	if (tidrangequals != NIL)
+	{
+		/*
+		 * This path uses no join clauses, but it could still have required
+		 * parameterization due to LATERAL refs in its tlist.
+		 */
+		Relids		required_outer = rel->lateral_relids;
+		path = (Path *) create_tidrangescan_path(root, rel,
+										tidrangequals,
+										required_outer,
+										parallel_workers);
+		return path;
+	}
+	return NULL;
 }
