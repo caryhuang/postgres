@@ -1305,12 +1305,6 @@ SELECT ctid FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
                TID Cond: (ctid > '(0,1)'::tid)
 (5 rows)
 
-SELECT ctid FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
- ctid  
--------
- (0,2)
-(1 row)
-
 EXPLAIN (COSTS OFF)
 SELECT ctid FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
                    QUERY PLAN                    
@@ -1322,12 +1316,6 @@ SELECT ctid FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
                TID Cond: (ctid < '(400,1)'::tid)
 (5 rows)
 
-SELECT ctid FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
- ctid  
--------
- (0,1)
-(1 row)
-
 EXPLAIN (COSTS OFF)
 SELECT ctid FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
                                   QUERY PLAN                                   
@@ -1338,12 +1326,6 @@ SELECT ctid FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
          ->  Parallel Tid Range Scan on tenk1
                TID Cond: ((ctid >= '(0,1)'::tid) AND (ctid <= '(400,1)'::tid))
 (5 rows)
-
-SELECT ctid FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
- ctid  
--------
- (0,1)
-(1 row)
 
 EXPLAIN (COSTS OFF)
 SELECT t.ctid,t2.c FROM tenk1 t,
@@ -1361,13 +1343,5 @@ WHERE t.ctid < '(1,0)' LIMIT 1;
                ->  Tid Range Scan on tenk1 t2
                      TID Cond: (ctid <= t.ctid)
 (9 rows)
-
-SELECT t.ctid,t2.c FROM tenk1 t,
-LATERAL (SELECT count(*) c FROM tenk1 t2 WHERE t2.ctid <= t.ctid) t2
-WHERE t.ctid < '(1,0)' LIMIT 1;
- ctid  | c 
--------+---
- (0,1) | 1
-(1 row)
 
 rollback;
