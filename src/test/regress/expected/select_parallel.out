@@ -1295,7 +1295,7 @@ SELECT 1 FROM tenk1_vw_sec
 
 -- test parallel tid range scan
 EXPLAIN (COSTS OFF)
-SELECT stringu1 FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
                   QUERY PLAN                   
 -----------------------------------------------
  Limit
@@ -1305,14 +1305,14 @@ SELECT stringu1 FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
                TID Cond: (ctid > '(0,1)'::tid)
 (5 rows)
 
-SELECT stringu1 FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
- stringu1 
-----------
- TUAAAA
+SELECT ctid FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
+ ctid  
+-------
+ (0,2)
 (1 row)
 
 EXPLAIN (COSTS OFF)
-SELECT stringu1 FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
                    QUERY PLAN                    
 -------------------------------------------------
  Limit
@@ -1322,14 +1322,14 @@ SELECT stringu1 FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
                TID Cond: (ctid < '(400,1)'::tid)
 (5 rows)
 
-SELECT stringu1 FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
- stringu1 
-----------
- MAAAAA
+SELECT ctid FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
+ ctid  
+-------
+ (0,1)
 (1 row)
 
 EXPLAIN (COSTS OFF)
-SELECT stringu1 FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
                                   QUERY PLAN                                   
 -------------------------------------------------------------------------------
  Limit
@@ -1339,10 +1339,10 @@ SELECT stringu1 FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
                TID Cond: ((ctid >= '(0,1)'::tid) AND (ctid <= '(400,1)'::tid))
 (5 rows)
 
-SELECT stringu1 FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
- stringu1 
-----------
- MAAAAA
+SELECT ctid FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
+ ctid  
+-------
+ (0,1)
 (1 row)
 
 EXPLAIN (COSTS OFF)

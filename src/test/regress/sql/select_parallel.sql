@@ -497,16 +497,16 @@ SELECT 1 FROM tenk1_vw_sec
 
 -- test parallel tid range scan
 EXPLAIN (COSTS OFF)
-SELECT stringu1 FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
-SELECT stringu1 FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid > '(0,1)' LIMIT 1;
 
 EXPLAIN (COSTS OFF)
-SELECT stringu1 FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
-SELECT stringu1 FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid < '(400,1)' LIMIT 1;
 
 EXPLAIN (COSTS OFF)
-SELECT stringu1 FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
-SELECT stringu1 FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
+SELECT ctid FROM tenk1 WHERE ctid >= '(0,1)' AND ctid <= '(400,1)' LIMIT 1;
 
 EXPLAIN (COSTS OFF)
 SELECT t.ctid,t2.c FROM tenk1 t,
