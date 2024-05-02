@@ -794,7 +794,6 @@ static void
 create_plain_partial_paths(PlannerInfo *root, RelOptInfo *rel)
 {
 	int			parallel_workers;
-	Path		*path = NULL;
 
 	parallel_workers = compute_parallel_worker(rel, rel->pages, -1,
 											   max_parallel_workers_per_gather);
@@ -805,10 +804,6 @@ create_plain_partial_paths(PlannerInfo *root, RelOptInfo *rel)
 
 	/* Add an unordered partial path based on a parallel sequential scan. */
 	add_partial_path(rel, create_seqscan_path(root, rel, NULL, parallel_workers));
-
-	path = create_tidrangescan_subpaths(root, rel, parallel_workers);
-	if (path)
-		add_partial_path(rel, path);
 }
 
 /*

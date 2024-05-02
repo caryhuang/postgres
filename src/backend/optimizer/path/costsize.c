@@ -1444,13 +1444,6 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 		run_cost /= parallel_divisor;
 
 		/*
-		 * It may be possible to amortize some of the I/O cost, but probably
-		 * not very much, because most operating systems already do aggressive
-		 * prefetching.  For now, we assume that the disk run cost can't be
-		 * amortized at all.
-		 */
-
-		/*
 		 * In the case of a parallel plan, the row count needs to represent
 		 * the number of tuples processed per worker.
 		 */

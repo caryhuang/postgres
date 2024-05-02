@@ -46,6 +46,7 @@
 #include "optimizer/pathnode.h"
 #include "optimizer/paths.h"
 #include "optimizer/restrictinfo.h"
+#include "optimizer/cost.h"
 
 
 /*
@@ -460,6 +461,7 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 {
 	List	   *tidquals;
 	List	   *tidrangequals;
+	int			parallel_workers;
 
 	/*
 	 * If any suitable quals exist in the rel's baserestrict list, generate a
@@ -526,32 +528,16 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 	 * join quals, for example.
 	 */
 	BuildParameterizedTidPaths(root, rel, rel->joininfo);
-}
 
-Path *
-create_tidrangescan_subpaths(PlannerInfo *root, RelOptInfo *rel, int parallel_workers)
-{
-	List	   *tidrangequals;
-	Path	   *path;
-	/*
-	 * If there are range quals in the baserestrict list, generate a
-	 * TidRangePath.
-	 */
-	tidrangequals = TidRangeQualFromRestrictInfoList(rel->baserestrictinfo,
-													 rel);
+	/* If appropriate, consider parallel tid range scan */
+	parallel_workers = compute_parallel_worker(rel, rel->pages, -1,
+			max_parallel_workers_per_gather);
 
-	if (tidrangequals != NIL)
+	if (parallel_workers > 0)
 	{
-		/*
-		 * This path uses no join clauses, but it could still have required
-		 * parameterization due to LATERAL refs in its tlist.
-		 */
 		Relids		required_outer = rel->lateral_relids;
-		path = (Path *) create_tidrangescan_path(root, rel,
-										tidrangequals,
-										required_outer,
-										parallel_workers);
-		return path;
+
+		add_partial_path(rel, (Path *) create_tidrangescan_path(root, rel, tidrangequals,
+						required_outer, parallel_workers));
 	}
-	return NULL;
 }

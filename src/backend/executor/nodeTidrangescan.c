@@ -444,6 +444,8 @@ ExecTidRangeScanInitializeDSM(TidRangeScanState *node,
 	table_parallelscan_initialize(node->ss.ss_currentRelation,
 								  pscan,
 								  estate->es_snapshot);
+	/* disable syncscan in parallel tid range scan */
+	pscan->phs_syncscan = false;
 	shm_toc_insert(pcxt->toc, node->ss.ps.plan->plan_node_id, pscan);
 	node->ss.ss_currentScanDesc =
 		table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan,
