@@ -461,7 +461,6 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 {
 	List	   *tidquals;
 	List	   *tidrangequals;
-	int			parallel_workers;
 
 	/*
 	 * If any suitable quals exist in the rel's baserestrict list, generate a
@@ -500,6 +499,20 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 														tidrangequals,
 														required_outer,
 														0));
+
+		/* If appropriate, consider parallel tid range scan */
+		if (rel->consider_parallel && required_outer == NULL)
+		{
+			int			parallel_workers;
+
+			parallel_workers = compute_parallel_worker(rel, rel->pages, -1,
+													   max_parallel_workers_per_gather);
+			if (parallel_workers > 0)
+			{
+				add_partial_path(rel, (Path *) create_tidrangescan_path(root, rel, tidrangequals,
+								required_outer, parallel_workers));
+			}
+		}
 	}
 
 	/*
@@ -528,16 +541,4 @@ create_tidscan_paths(PlannerInfo *root, RelOptInfo *rel)
 	 * join quals, for example.
 	 */
 	BuildParameterizedTidPaths(root, rel, rel->joininfo);
-
-	/* If appropriate, consider parallel tid range scan */
-	parallel_workers = compute_parallel_worker(rel, rel->pages, -1,
-			max_parallel_workers_per_gather);
-
-	if (parallel_workers > 0)
-	{
-		Relids		required_outer = rel->lateral_relids;
-
-		add_partial_path(rel, (Path *) create_tidrangescan_path(root, rel, tidrangequals,
-						required_outer, parallel_workers));
-	}
 }
