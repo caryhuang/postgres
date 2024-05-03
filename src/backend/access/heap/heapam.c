@@ -1367,8 +1367,7 @@ heap_set_tidrange(TableScanDesc sscan, ItemPointer mintid,
 	 * Check for an empty range and protect from would be negative results
 	 * from the numBlks calculation below.
 	 */
-	if (ItemPointerCompare(&highestItem, &lowestItem) < 0 &&
-		sscan->rs_parallel == NULL)
+	if (ItemPointerCompare(&highestItem, &lowestItem) < 0)
 	{
 		/* Set an empty range of blocks to scan */
 		heap_setscanlimits(sscan, 0, 0);
@@ -1382,7 +1381,7 @@ heap_set_tidrange(TableScanDesc sscan, ItemPointer mintid,
 	 * lowestItem has an offset above MaxOffsetNumber.  In this case, we could
 	 * advance startBlk by one.  Likewise, if highestItem has an offset of 0
 	 * we could scan one fewer blocks.  However, such an optimization does not
-	 * seem worth troubling over, currently.
+	 * seem worth troubling over.
 	 */
 	startBlk = ItemPointerGetBlockNumberNoCheck(&lowestItem);
 
@@ -1391,7 +1390,6 @@ heap_set_tidrange(TableScanDesc sscan, ItemPointer mintid,
 
 	/* Set the start block and number of blocks to scan */
 	heap_setscanlimits(sscan, startBlk, numBlks);
-
 
 	/* Finally, set the TID range in sscan */
 	ItemPointerCopy(&lowestItem, &sscan->rs_mintid);
