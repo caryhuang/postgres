@@ -188,8 +188,7 @@ table_beginscan_parallel(Relation relation, ParallelTableScanDesc pscan)
 }
 
 TableScanDesc
-table_beginscan_parallel_tidrange(Relation relation, ParallelTableScanDesc pscan,
-								  ItemPointer mintid, ItemPointer maxtid)
+table_beginscan_parallel_tidrange(Relation relation, ParallelTableScanDesc pscan)
 {
 	Snapshot	snapshot;
 	uint32		flags = SO_TYPE_TIDRANGESCAN | SO_ALLOW_PAGEMODE;
