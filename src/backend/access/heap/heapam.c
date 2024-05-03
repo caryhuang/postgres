@@ -1381,7 +1381,7 @@ heap_set_tidrange(TableScanDesc sscan, ItemPointer mintid,
 	 * lowestItem has an offset above MaxOffsetNumber.  In this case, we could
 	 * advance startBlk by one.  Likewise, if highestItem has an offset of 0
 	 * we could scan one fewer blocks.  However, such an optimization does not
-	 * seem worth troubling over.
+	 * seem worth troubling over, currently.
 	 */
 	startBlk = ItemPointerGetBlockNumberNoCheck(&lowestItem);
 
