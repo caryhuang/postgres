@@ -604,7 +604,8 @@ table_block_parallelscan_nextpage(Relation rel,
 		pbscanwork->phsw_chunk_remaining = pbscanwork->phsw_chunk_size - 1;
 	}
 
-	if (nallocated >= pbscan->phs_nblocks)
+	if (nallocated >= pbscan->phs_nblocks || (pbscan->phs_numblock != 0 &&
+		nallocated >= pbscan->phs_numblock))
 		page = InvalidBlockNumber;	/* all blocks have been allocated */
 	else
 		page = (nallocated + pbscan->phs_startblock) % pbscan->phs_nblocks;
