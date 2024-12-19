@@ -1563,7 +1563,7 @@ void
 be_tls_get_peer_not_before(Port *port, TimestampTz *ptr)
 {
 	if (port->peer)
-		*ptr = ASN1_TIME_to_timestamptz(X509_get_notBefore(port->peer));
+		*ptr = ASN1_TIME_to_timestamptz(X509_get0_notBefore(port->peer));
 	else
 		*ptr = 0;
 }
@@ -1572,7 +1572,7 @@ void
 be_tls_get_peer_not_after(Port *port, TimestampTz *ptr)
 {
 	if (port->peer)
-		*ptr = ASN1_TIME_to_timestamptz(X509_get_notAfter(port->peer));
+		*ptr = ASN1_TIME_to_timestamptz(X509_get0_notAfter(port->peer));
 	else
 		*ptr = 0;
 }
