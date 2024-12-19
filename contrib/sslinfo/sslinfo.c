@@ -35,7 +35,7 @@ PG_MODULE_MAGIC;
 
 static Datum X509_NAME_field_to_text(X509_NAME *name, text *fieldName);
 static Datum ASN1_STRING_to_text(ASN1_STRING *str);
-static Datum ASN1_TIME_to_timestamptz(ASN1_TIME *time);
+static Datum ASN1_TIME_to_timestamptz(const ASN1_TIME *time);
 
 /*
  * Function context for data persisting over repeated calls.
@@ -235,7 +235,7 @@ X509_NAME_field_to_text(X509_NAME *name, text *fieldName)
  * Returns the ASN1_TIME timestamp as a timestamptz datum.
  */
 static Datum
-ASN1_TIME_to_timestamptz(ASN1_TIME *ASN1_cert_ts)
+ASN1_TIME_to_timestamptz(const ASN1_TIME *ASN1_cert_ts)
 {
 	struct pg_tm	pgtm;
 	struct tm	tm;
@@ -535,7 +535,7 @@ ssl_client_get_notbefore(PG_FUNCTION_ARGS)
 	if (!MyProcPort->ssl_in_use || !MyProcPort->peer_cert_valid)
 		PG_RETURN_NULL();
 
-	return ASN1_TIME_to_timestamptz(X509_get_notBefore(cert));
+	return ASN1_TIME_to_timestamptz(X509_get0_notBefore(cert));
 }
 
 /*
@@ -551,5 +551,5 @@ ssl_client_get_notafter(PG_FUNCTION_ARGS)
 	if (!MyProcPort->ssl_in_use || !MyProcPort->peer_cert_valid)
 		PG_RETURN_NULL();
 
-	return ASN1_TIME_to_timestamptz(X509_get_notAfter(cert));
+	return ASN1_TIME_to_timestamptz(X509_get0_notAfter(cert));
 }

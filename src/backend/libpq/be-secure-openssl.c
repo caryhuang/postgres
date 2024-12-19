@@ -80,7 +80,7 @@ static const char *SSLerrmessageExt(unsigned long ecode, const char *replacement
 static const char *SSLerrmessage(unsigned long ecode);
 
 static char *X509_NAME_to_cstring(X509_NAME *name);
-static TimestampTz ASN1_TIME_to_timestamptz(ASN1_TIME *time);
+static TimestampTz ASN1_TIME_to_timestamptz(const ASN1_TIME *time);
 
 static SSL_CTX *SSL_context = NULL;
 static bool dummy_ssl_passwd_cb_called = false;
@@ -1724,7 +1724,7 @@ X509_NAME_to_cstring(X509_NAME *name)
  * Convert an ASN1_TIME to a PostgreSQL Timestamp datum.
  */
 static TimestampTz
-ASN1_TIME_to_timestamptz(ASN1_TIME *ASN1_cert_ts)
+ASN1_TIME_to_timestamptz(const ASN1_TIME *ASN1_cert_ts)
 {
 	struct pg_tm	pgtm;
 	struct tm	tm;
