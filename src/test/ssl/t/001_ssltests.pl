@@ -755,7 +755,7 @@ command_like(
 		  "SELECT * FROM pg_stat_ssl WHERE pid = pg_backend_pid()"
 	],
 	qr{^pid,ssl,version,cipher,bits,client_dn,client_serial,issuer_dn,not_before,not_after\r?\n
-				^\d+,t,TLSv[\d.]+,[\w-]+,\d+,/?CN=ssltestuser,$serialno,/?\QCN=Test CA for PostgreSQL SSL regression test client certs\E\r?$}mx,
+				^\d+,t,TLSv[\d.]+,[\w-]+,\d+,/?CN=ssltestuser,$serialno,/?\QCN=Test CA for PostgreSQL SSL regression test client certs,2023-06-29 01:01:01+00,2050-01-01 01:01:01+00\E\r?$}mx,
 	'pg_stat_ssl with client certificate');
 
 # client key with wrong permissions
