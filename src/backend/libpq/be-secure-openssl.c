@@ -35,6 +35,7 @@
 #include "storage/latch.h"
 #include "utils/guc.h"
 #include "utils/memutils.h"
+#include "utils/timestamp.h"
 
 /*
  * These SSL-related #includes must come after all system-provided headers.
@@ -79,6 +80,7 @@ static const char *SSLerrmessageExt(unsigned long ecode, const char *replacement
 static const char *SSLerrmessage(unsigned long ecode);
 
 static char *X509_NAME_to_cstring(X509_NAME *name);
+static TimestampTz ASN1_TIME_to_timestamptz(const ASN1_TIME *time);
 
 static SSL_CTX *SSL_context = NULL;
 static bool dummy_ssl_passwd_cb_called = false;
@@ -1558,6 +1560,24 @@ be_tls_get_peer_issuer_name(Port *port, char *ptr, size_t len)
 }
 
 void
+be_tls_get_peer_not_before(Port *port, TimestampTz *ptr)
+{
+	if (port->peer)
+		*ptr = ASN1_TIME_to_timestamptz(X509_get0_notBefore(port->peer));
+	else
+		*ptr = 0;
+}
+
+void
+be_tls_get_peer_not_after(Port *port, TimestampTz *ptr)
+{
+	if (port->peer)
+		*ptr = ASN1_TIME_to_timestamptz(X509_get0_notAfter(port->peer));
+	else
+		*ptr = 0;
+}
+
+void
 be_tls_get_peer_serial(Port *port, char *ptr, size_t len)
 {
 	if (port->peer)
@@ -1698,6 +1718,38 @@ X509_NAME_to_cstring(X509_NAME *name)
 		elog(ERROR, "could not free OpenSSL BIO structure");
 
 	return result;
+}
+
+/*
+ * Convert an ASN1_TIME to a PostgreSQL Timestamp datum.
+ */
+static TimestampTz
+ASN1_TIME_to_timestamptz(const ASN1_TIME *ASN1_cert_ts)
+{
+	struct pg_tm	pgtm;
+	struct tm	tm;
+	int			ret;
+	TimestampTz	ts;
+
+	ret = ASN1_TIME_to_tm(ASN1_cert_ts, &tm);
+	if (!ret)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("failed to parse certificate validity")));
+
+	pgtm.tm_sec = tm.tm_sec;
+	pgtm.tm_min = tm.tm_min;
+	pgtm.tm_hour = tm.tm_hour;
+	pgtm.tm_mday = tm.tm_mday;
+	pgtm.tm_mon = tm.tm_mon + 1;
+	pgtm.tm_year = tm.tm_year + 1900;
+
+	if (unlikely(tm2timestamp(&pgtm, 0, NULL, &ts) != 0))
+		ereport(ERROR,
+				errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("timestamp out of range"));
+
+	return ts;
 }
 
 /*

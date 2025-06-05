@@ -18,6 +18,7 @@
 #include "libpq/libpq-be.h"
 #include "miscadmin.h"
 #include "utils/builtins.h"
+#include "utils/timestamp.h"
 
 PG_MODULE_MAGIC_EXT(
 					.name = "sslinfo",
@@ -26,6 +27,7 @@ PG_MODULE_MAGIC_EXT(
 
 static Datum X509_NAME_field_to_text(X509_NAME *name, text *fieldName);
 static Datum ASN1_STRING_to_text(ASN1_STRING *str);
+static Datum ASN1_TIME_to_timestamptz(const ASN1_TIME *time);
 
 /*
  * Function context for data persisting over repeated calls.
@@ -214,6 +216,43 @@ X509_NAME_field_to_text(X509_NAME *name, text *fieldName)
 		return (Datum) 0;
 	data = X509_NAME_ENTRY_get_data(X509_NAME_get_entry(name, index));
 	return ASN1_STRING_to_text(data);
+}
+
+
+/*
+ * Converts OpenSSL ASN1_TIME structure into timestamptz
+ *
+ * Parameter: ASN1_TIME timestamp from certificate
+ *
+ * Returns the ASN1_TIME timestamp as a timestamptz datum.
+ */
+static Datum
+ASN1_TIME_to_timestamptz(const ASN1_TIME *ASN1_cert_ts)
+{
+	struct pg_tm	pgtm;
+	struct tm	tm;
+	int			ret;
+	Timestamp	ts;
+
+	ret = ASN1_TIME_to_tm(ASN1_cert_ts, &tm);
+	if (!ret)
+		ereport(ERROR,
+				(errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				 errmsg("failed to parse certificate validity")));
+
+	pgtm.tm_sec = tm.tm_sec;
+	pgtm.tm_min = tm.tm_min;
+	pgtm.tm_hour = tm.tm_hour;
+	pgtm.tm_mday = tm.tm_mday;
+	pgtm.tm_mon = tm.tm_mon + 1;
+	pgtm.tm_year = tm.tm_year + 1900;
+
+	if (unlikely(tm2timestamp(&pgtm, 0, NULL, &ts) != 0))
+		ereport(ERROR,
+				errcode(ERRCODE_INVALID_PARAMETER_VALUE),
+				errmsg("timestamp out of range"));
+
+	PG_RETURN_TIMESTAMP(ts);
 }
 
 
@@ -473,4 +512,36 @@ ssl_extension_info(PG_FUNCTION_ARGS)
 
 	/* All done */
 	SRF_RETURN_DONE(funcctx);
+}
+
+/*
+ * Returns current client certificate notBefore timestamp in
+ * timestamptz data type
+ */
+PG_FUNCTION_INFO_V1(ssl_client_get_notbefore);
+Datum
+ssl_client_get_notbefore(PG_FUNCTION_ARGS)
+{
+	X509	   *cert = MyProcPort->peer;
+
+	if (!MyProcPort->ssl_in_use || !MyProcPort->peer_cert_valid)
+		PG_RETURN_NULL();
+
+	return ASN1_TIME_to_timestamptz(X509_get0_notBefore(cert));
+}
+
+/*
+ * Returns current client certificate notAfter timestamp in
+ * timestamptz data type
+ */
+PG_FUNCTION_INFO_V1(ssl_client_get_notafter);
+Datum
+ssl_client_get_notafter(PG_FUNCTION_ARGS)
+{
+	X509	   *cert = MyProcPort->peer;
+
+	if (!MyProcPort->ssl_in_use || !MyProcPort->peer_cert_valid)
+		PG_RETURN_NULL();
+
+	return ASN1_TIME_to_timestamptz(X509_get0_notAfter(cert));
 }
