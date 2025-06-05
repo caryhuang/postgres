@@ -188,6 +188,34 @@ table_beginscan_parallel(Relation relation, ParallelTableScanDesc pscan)
 											pscan, flags);
 }
 
+TableScanDesc
+table_beginscan_parallel_tidrange(Relation relation, ParallelTableScanDesc pscan)
+{
+	Snapshot	snapshot;
+	uint32		flags = SO_TYPE_TIDRANGESCAN | SO_ALLOW_PAGEMODE;
+	TableScanDesc sscan;
+
+	Assert(RelFileLocatorEquals(relation->rd_locator, pscan->phs_locator));
+
+	if (!pscan->phs_snapshot_any)
+	{
+		/* Snapshot was serialized -- restore it */
+		snapshot = RestoreSnapshot((char *) pscan + pscan->phs_snapshot_off);
+		RegisterSnapshot(snapshot);
+		flags |= SO_TEMP_SNAPSHOT;
+	}
+	else
+	{
+		/* SnapshotAny passed by caller (not serialized) */
+		snapshot = SnapshotAny;
+	}
+
+	sscan = relation->rd_tableam->scan_begin(relation, snapshot, 0, NULL,
+											 pscan, flags);
+
+	return sscan;
+}
+
 
 /* ----------------------------------------------------------------------------
  * Index scan related functions.
@@ -577,7 +605,19 @@ table_block_parallelscan_nextpage(Relation rel,
 		pbscanwork->phsw_chunk_remaining = pbscanwork->phsw_chunk_size - 1;
 	}
 
-	if (nallocated >= pbscan->phs_nblocks)
+	/*
+	 * In a parallel TID range scan, 'pbscan->phs_numblock' will be non-zero
+	 * that defines the upper limit on the number of blocks to scan based on
+	 * the specified TID range. This value may be less than or equal to
+	 * 'pbscan->phs_nblocks', which is the total number of blocks in the
+	 * relation.
+	 *
+	 * The scan can terminate early once 'nallocated' reaches 'phs_numblock',
+	 * even if the full relation has more blocks. This ensures that parallel
+	 * workers only scan the subset of blocks that fall within the TID range.
+	 */
+	if (nallocated >= pbscan->phs_nblocks || (pbscan->phs_numblock != 0 &&
+		nallocated >= pbscan->phs_numblock))
 		page = InvalidBlockNumber;	/* all blocks have been allocated */
 	else
 		page = (nallocated + pbscan->phs_startblock) % pbscan->phs_nblocks;
