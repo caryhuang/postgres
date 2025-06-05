@@ -104,28 +104,28 @@ SET parallel_tuple_cost=0;
 SET min_parallel_table_scan_size=0;
 SET max_parallel_workers_per_gather=4;
 
-CREATE TABLE parallel_tidrangescan(id integer, data text) with (fillfactor=10);
+CREATE TABLE parallel_tidrangescan(id integer, data text) WITH (fillfactor=10);
 
 -- insert enough tuples such that each page gets 5 tuples with fillfactor = 10
 INSERT INTO parallel_tidrangescan SELECT i,repeat('x', 100) FROM generate_series(1,200) AS s(i);
 
 -- ensure there are 40 pages for parallel test
-select min(ctid), max(ctid) from parallel_tidrangescan;
+SELECT min(ctid), max(ctid) FROM parallel_tidrangescan;
 
 -- parallel range scans with upper bound
-explain (costs off)
-select count(*) from parallel_tidrangescan where ctid<'(30,1)';
-select count(*) from parallel_tidrangescan where ctid<'(30,1)';
+EXPLAIN (costs off)
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid<'(30,1)';
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid<'(30,1)';
 
 -- parallel range scans with lower bound
-explain (costs off)
-select count(*) from parallel_tidrangescan where ctid>'(10,0)';
-select count(*) from parallel_tidrangescan where ctid>'(10,0)';
+EXPLAIN (costs off)
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)';
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)';
 
 -- parallel range scans with both bounds
-explain (costs off)
-select count(*) from parallel_tidrangescan where ctid>'(10,0)' and ctid<'(30,1)';
-select count(*) from parallel_tidrangescan where ctid>'(10,0)' and ctid<'(30,1)';
+EXPLAIN (costs off)
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)' AND ctid<'(30,1)';
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)' AND ctid<'(30,1)';
 
 -- parallel rescans
 EXPLAIN (COSTS OFF)
