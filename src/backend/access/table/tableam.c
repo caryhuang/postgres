@@ -426,6 +426,7 @@ table_block_parallelscan_initialize(Relation rel, ParallelTableScanDesc pscan)
 		bpscan->phs_nblocks > NBuffers / 4;
 	SpinLockInit(&bpscan->phs_mutex);
 	bpscan->phs_startblock = InvalidBlockNumber;
+	bpscan->phs_numblock = InvalidBlockNumber;
 	pg_atomic_init_u64(&bpscan->phs_nallocated, 0);
 
 	return sizeof(ParallelBlockTableScanDescData);
@@ -606,18 +607,18 @@ table_block_parallelscan_nextpage(Relation rel,
 	}
 
 	/*
-	 * In a parallel TID range scan, 'pbscan->phs_numblock' will be non-zero
-	 * that defines the upper limit on the number of blocks to scan based on
-	 * the specified TID range. This value may be less than or equal to
-	 * 'pbscan->phs_nblocks', which is the total number of blocks in the
-	 * relation.
+	 * In a parallel TID range scan, 'pbscan->phs_numblock' is non-zero if an
+	 * upper TID range limit is specified, or InvalidBlockNumber if no limit
+	 * is given. This value may be less than or equal to 'pbscan->phs_nblocks'
+	 * , which is the total number of blocks in the relation.
 	 *
 	 * The scan can terminate early once 'nallocated' reaches 'phs_numblock',
-	 * even if the full relation has more blocks. This ensures that parallel
-	 * workers only scan the subset of blocks that fall within the TID range.
+	 * even if the full relation has remaining blocks to scan. This ensures
+	 * that parallel workers only scan the subset of blocks that fall within
+	 * the TID range.
 	 */
-	if (nallocated >= pbscan->phs_nblocks || (pbscan->phs_numblock != 0 &&
-		nallocated >= pbscan->phs_numblock))
+	if (nallocated >= pbscan->phs_nblocks || (pbscan->phs_numblock !=
+			InvalidBlockNumber && nallocated >= pbscan->phs_numblock))
 		page = InvalidBlockNumber;	/* all blocks have been allocated */
 	else
 		page = (nallocated + pbscan->phs_startblock) % pbscan->phs_nblocks;

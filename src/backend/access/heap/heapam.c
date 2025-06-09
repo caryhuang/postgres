@@ -1479,7 +1479,7 @@ heap_set_tidrange(TableScanDesc sscan, ItemPointer mintid,
 	heap_setscanlimits(sscan, startBlk, numBlks);
 
 	/*
-	 * if parallel mode is used, store startblock and numblocks in parallel
+	 * If parallel mode is used, store startBlk and numBlks in parallel
 	 * scan descriptor as well.
 	 */
 	if (scan->rs_base.rs_parallel != NULL)
@@ -1487,8 +1487,8 @@ heap_set_tidrange(TableScanDesc sscan, ItemPointer mintid,
 		ParallelBlockTableScanDesc bpscan = NULL;
 
 		bpscan = (ParallelBlockTableScanDesc) scan->rs_base.rs_parallel;
-		bpscan->phs_startblock = scan->rs_startblock;
-		bpscan->phs_numblock = scan->rs_numblocks;
+		bpscan->phs_startblock = startBlk;
+		bpscan->phs_numblock = numBlks;
 	}
 
 	/* Finally, set the TID range in sscan */
