@@ -188,6 +188,34 @@ table_beginscan_parallel(Relation relation, ParallelTableScanDesc pscan)
 											pscan, flags);
 }
 
+TableScanDesc
+table_beginscan_parallel_tidrange(Relation relation, ParallelTableScanDesc pscan)
+{
+	Snapshot	snapshot;
+	uint32		flags = SO_TYPE_TIDRANGESCAN | SO_ALLOW_PAGEMODE;
+	TableScanDesc sscan;
+
+	Assert(RelFileLocatorEquals(relation->rd_locator, pscan->phs_locator));
+
+	if (!pscan->phs_snapshot_any)
+	{
+		/* Snapshot was serialized -- restore it */
+		snapshot = RestoreSnapshot((char *) pscan + pscan->phs_snapshot_off);
+		RegisterSnapshot(snapshot);
+		flags |= SO_TEMP_SNAPSHOT;
+	}
+	else
+	{
+		/* SnapshotAny passed by caller (not serialized) */
+		snapshot = SnapshotAny;
+	}
+
+	sscan = relation->rd_tableam->scan_begin(relation, snapshot, 0, NULL,
+											 pscan, flags);
+
+	return sscan;
+}
+
 
 /* ----------------------------------------------------------------------------
  * Index scan related functions.
@@ -398,6 +426,7 @@ table_block_parallelscan_initialize(Relation rel, ParallelTableScanDesc pscan)
 		bpscan->phs_nblocks > NBuffers / 4;
 	SpinLockInit(&bpscan->phs_mutex);
 	bpscan->phs_startblock = InvalidBlockNumber;
+	bpscan->phs_numblock = InvalidBlockNumber;
 	pg_atomic_init_u64(&bpscan->phs_nallocated, 0);
 
 	return sizeof(ParallelBlockTableScanDescData);
@@ -577,7 +606,19 @@ table_block_parallelscan_nextpage(Relation rel,
 		pbscanwork->phsw_chunk_remaining = pbscanwork->phsw_chunk_size - 1;
 	}
 
-	if (nallocated >= pbscan->phs_nblocks)
+	/*
+	 * In a parallel TID range scan, 'pbscan->phs_numblock' is non-zero if an
+	 * upper TID range limit is specified, or InvalidBlockNumber if no limit
+	 * is given. This value may be less than or equal to 'pbscan->phs_nblocks'
+	 * , which is the total number of blocks in the relation.
+	 *
+	 * The scan can terminate early once 'nallocated' reaches 'phs_numblock',
+	 * even if the full relation has remaining blocks to scan. This ensures
+	 * that parallel workers only scan the subset of blocks that fall within
+	 * the TID range.
+	 */
+	if (nallocated >= pbscan->phs_nblocks || (pbscan->phs_numblock !=
+			InvalidBlockNumber && nallocated >= pbscan->phs_numblock))
 		page = InvalidBlockNumber;	/* all blocks have been allocated */
 	else
 		page = (nallocated + pbscan->phs_startblock) % pbscan->phs_nblocks;
