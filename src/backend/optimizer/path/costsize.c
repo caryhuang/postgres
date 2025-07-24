@@ -1367,7 +1367,8 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 	Selectivity selectivity;
 	double		pages;
 	Cost		startup_cost = 0;
-	Cost		run_cost = 0;
+	Cost		cpu_run_cost = 0;
+	Cost		disk_run_cost = 0;
 	QualCost	qpqual_cost;
 	Cost		cpu_per_tuple;
 	QualCost	tid_qual_cost;
@@ -1396,11 +1397,7 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 
 	/*
 	 * The first page in a range requires a random seek, but each subsequent
-	 * page is just a normal sequential page read. NOTE: it's desirable for
-	 * TID Range Scans to cost more than the equivalent Sequential Scans,
-	 * because Seq Scans have some performance advantages such as scan
-	 * synchronization and parallelizability, and we'd prefer one of them to
-	 * be picked unless a TID Range Scan really is better.
+	 * page is just a normal sequential page read.
 	 */
 	ntuples = selectivity * baserel->tuples;
 	nseqpages = pages - 1.0;
@@ -1417,7 +1414,7 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 							  &spc_seq_page_cost);
 
 	/* disk costs; 1 random page and the remainder as seq pages */
-	run_cost += spc_random_page_cost + spc_seq_page_cost * nseqpages;
+	disk_run_cost += spc_random_page_cost + spc_seq_page_cost * nseqpages;
 
 	/* Add scanning CPU costs */
 	get_restriction_qual_cost(root, baserel, param_info, &qpqual_cost);
@@ -1425,24 +1422,39 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 	/*
 	 * XXX currently we assume TID quals are a subset of qpquals at this
 	 * point; they will be removed (if possible) when we create the plan, so
-	 * we subtract their cost from the total qpqual cost.  (If the TID quals
+	 * we subtract their cost from the total qpqual cost. (If the TID quals
 	 * can't be removed, this is a mistake and we're going to underestimate
 	 * the CPU cost a bit.)
 	 */
 	startup_cost += qpqual_cost.startup + tid_qual_cost.per_tuple;
 	cpu_per_tuple = cpu_tuple_cost + qpqual_cost.per_tuple -
 		tid_qual_cost.per_tuple;
-	run_cost += cpu_per_tuple * ntuples;
+	cpu_run_cost += cpu_per_tuple * ntuples;
 
 	/* tlist eval costs are paid per output row, not per tuple scanned */
 	startup_cost += path->pathtarget->cost.startup;
-	run_cost += path->pathtarget->cost.per_tuple * path->rows;
+	cpu_run_cost += path->pathtarget->cost.per_tuple * path->rows;
+
+	/* Adjust costing for parallelism, if used. */
+	if (path->parallel_workers > 0)
+	{
+		double		parallel_divisor = get_parallel_divisor(path);
+
+		/* The CPU cost is divided among all the workers. */
+		cpu_run_cost /= parallel_divisor;
+
+		/*
+		 * In the case of a parallel plan, the row count needs to represent
+		 * the number of tuples processed per worker.
+		 */
+		path->rows = clamp_row_est(path->rows / parallel_divisor);
+	}
 
 	/* we should not generate this path type when enable_tidscan=false */
 	Assert(enable_tidscan);
 	path->disabled_nodes = 0;
 	path->startup_cost = startup_cost;
-	path->total_cost = startup_cost + run_cost;
+	path->total_cost = startup_cost + cpu_run_cost + disk_run_cost;
 }
 
 /*

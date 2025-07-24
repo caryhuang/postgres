@@ -41,6 +41,7 @@
 #include "executor/nodeSort.h"
 #include "executor/nodeSubplan.h"
 #include "executor/tqueue.h"
+#include "executor/nodeTidrangescan.h"
 #include "jit/jit.h"
 #include "nodes/nodeFuncs.h"
 #include "pgstat.h"
@@ -265,6 +266,11 @@ ExecParallelEstimate(PlanState *planstate, ExecParallelEstimateContext *e)
 			if (planstate->plan->parallel_aware)
 				ExecForeignScanEstimate((ForeignScanState *) planstate,
 										e->pcxt);
+			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanEstimate((TidRangeScanState *) planstate,
+										 e->pcxt);
 			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
@@ -492,6 +498,11 @@ ExecParallelInitializeDSM(PlanState *planstate,
 			if (planstate->plan->parallel_aware)
 				ExecForeignScanInitializeDSM((ForeignScanState *) planstate,
 											 d->pcxt);
+			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanInitializeDSM((TidRangeScanState *) planstate,
+										 	  d->pcxt);
 			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
@@ -994,6 +1005,11 @@ ExecParallelReInitializeDSM(PlanState *planstate,
 				ExecForeignScanReInitializeDSM((ForeignScanState *) planstate,
 											   pcxt);
 			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanReInitializeDSM((TidRangeScanState *) planstate,
+										   	    pcxt);
+			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
 				ExecAppendReInitializeDSM((AppendState *) planstate, pcxt);
@@ -1020,7 +1036,6 @@ ExecParallelReInitializeDSM(PlanState *planstate,
 		case T_MemoizeState:
 			/* these nodes have DSM state, but no reinitialization is required */
 			break;
-
 		default:
 			break;
 	}
@@ -1361,6 +1376,11 @@ ExecParallelInitializeWorker(PlanState *planstate, ParallelWorkerContext *pwcxt)
 			if (planstate->plan->parallel_aware)
 				ExecForeignScanInitializeWorker((ForeignScanState *) planstate,
 												pwcxt);
+			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanInitializeWorker((TidRangeScanState *) planstate,
+												 pwcxt);
 			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
