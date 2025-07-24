@@ -612,14 +612,16 @@ table_block_parallelscan_nextpage(Relation rel,
 	 * is given. This value may be less than or equal to 'pbscan->phs_nblocks'
 	 * , which is the total number of blocks in the relation.
 	 *
-	 * The scan can terminate early once 'nallocated' reaches 'phs_numblock',
-	 * even if the full relation has remaining blocks to scan. This ensures
-	 * that parallel workers only scan the subset of blocks that fall within
-	 * the TID range.
+	 * The scan can terminate early once 'nallocated' reaches
+	 * 'pbscan->phs_numblock', even if the full relation has remaining blocks
+	 * to scan. This ensures that parallel workers only scan the subset of
+	 * blocks that fall within the TID range.
 	 */
-	if (nallocated >= pbscan->phs_nblocks || (pbscan->phs_numblock !=
-			InvalidBlockNumber && nallocated >= pbscan->phs_numblock))
-		page = InvalidBlockNumber;	/* all blocks have been allocated */
+	if (nallocated >= pbscan->phs_nblocks)
+	    page = InvalidBlockNumber; /* all blocks have been allocated */
+	else if (pbscan->phs_numblock != InvalidBlockNumber &&
+			 nallocated >= pbscan->phs_numblock)
+		page = InvalidBlockNumber; /* upper scan limit reached */
 	else
 		page = (nallocated + pbscan->phs_startblock) % pbscan->phs_nblocks;
 

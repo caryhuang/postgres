@@ -267,6 +267,11 @@ ExecParallelEstimate(PlanState *planstate, ExecParallelEstimateContext *e)
 				ExecForeignScanEstimate((ForeignScanState *) planstate,
 										e->pcxt);
 			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanEstimate((TidRangeScanState *) planstate,
+										 e->pcxt);
+			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
 				ExecAppendEstimate((AppendState *) planstate,
@@ -306,11 +311,6 @@ ExecParallelEstimate(PlanState *planstate, ExecParallelEstimateContext *e)
 		case T_MemoizeState:
 			/* even when not parallel-aware, for EXPLAIN ANALYZE */
 			ExecMemoizeEstimate((MemoizeState *) planstate, e->pcxt);
-			break;
-		case T_TidRangeScanState:
-			if (planstate->plan->parallel_aware)
-				ExecTidRangeScanEstimate((TidRangeScanState *) planstate,
-									e->pcxt);
 			break;
 		default:
 			break;
@@ -499,6 +499,11 @@ ExecParallelInitializeDSM(PlanState *planstate,
 				ExecForeignScanInitializeDSM((ForeignScanState *) planstate,
 											 d->pcxt);
 			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanInitializeDSM((TidRangeScanState *) planstate,
+										 	  d->pcxt);
+			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
 				ExecAppendInitializeDSM((AppendState *) planstate,
@@ -538,11 +543,6 @@ ExecParallelInitializeDSM(PlanState *planstate,
 		case T_MemoizeState:
 			/* even when not parallel-aware, for EXPLAIN ANALYZE */
 			ExecMemoizeInitializeDSM((MemoizeState *) planstate, d->pcxt);
-			break;
-		case T_TidRangeScanState:
-			if (planstate->plan->parallel_aware)
-				ExecTidRangeScanInitializeDSM((TidRangeScanState *) planstate,
-										 d->pcxt);
 			break;
 		default:
 			break;
@@ -1005,6 +1005,11 @@ ExecParallelReInitializeDSM(PlanState *planstate,
 				ExecForeignScanReInitializeDSM((ForeignScanState *) planstate,
 											   pcxt);
 			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanReInitializeDSM((TidRangeScanState *) planstate,
+										   	    pcxt);
+			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
 				ExecAppendReInitializeDSM((AppendState *) planstate, pcxt);
@@ -1031,12 +1036,6 @@ ExecParallelReInitializeDSM(PlanState *planstate,
 		case T_MemoizeState:
 			/* these nodes have DSM state, but no reinitialization is required */
 			break;
-		case T_TidRangeScanState:
-			if (planstate->plan->parallel_aware)
-				ExecTidRangeScanReInitializeDSM((TidRangeScanState *) planstate,
-										   pcxt);
-			break;
-
 		default:
 			break;
 	}
@@ -1378,6 +1377,11 @@ ExecParallelInitializeWorker(PlanState *planstate, ParallelWorkerContext *pwcxt)
 				ExecForeignScanInitializeWorker((ForeignScanState *) planstate,
 												pwcxt);
 			break;
+		case T_TidRangeScanState:
+			if (planstate->plan->parallel_aware)
+				ExecTidRangeScanInitializeWorker((TidRangeScanState *) planstate,
+												 pwcxt);
+			break;
 		case T_AppendState:
 			if (planstate->plan->parallel_aware)
 				ExecAppendInitializeWorker((AppendState *) planstate, pwcxt);
@@ -1417,10 +1421,6 @@ ExecParallelInitializeWorker(PlanState *planstate, ParallelWorkerContext *pwcxt)
 		case T_MemoizeState:
 			/* even when not parallel-aware, for EXPLAIN ANALYZE */
 			ExecMemoizeInitializeWorker((MemoizeState *) planstate, pwcxt);
-			break;
-		case T_TidRangeScanState:
-			if (planstate->plan->parallel_aware)
-				ExecTidRangeScanInitializeWorker((TidRangeScanState *) planstate, pwcxt);
 			break;
 		default:
 			break;
