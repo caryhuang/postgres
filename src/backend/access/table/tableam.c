@@ -197,6 +197,9 @@ table_beginscan_parallel_tidrange(Relation relation, ParallelTableScanDesc pscan
 
 	Assert(RelFileLocatorEquals(relation->rd_locator, pscan->phs_locator));
 
+	/* disable syncscan in parallel tid range scan. */
+	pscan->phs_syncscan = false;
+
 	if (!pscan->phs_snapshot_any)
 	{
 		/* Snapshot was serialized -- restore it */
@@ -607,18 +610,11 @@ table_block_parallelscan_nextpage(Relation rel,
 	}
 
 	/*
-	 * In a parallel TID range scan, 'pbscan->phs_numblock' is non-zero if an
-	 * upper TID range limit is specified, or InvalidBlockNumber if no limit
-	 * is given. This value may be less than or equal to 'pbscan->phs_nblocks'
-	 * , which is the total number of blocks in the relation.
-	 *
-	 * The scan can terminate early once 'nallocated' reaches
-	 * 'pbscan->phs_numblock', even if the full relation has remaining blocks
-	 * to scan. This ensures that parallel workers only scan the subset of
-	 * blocks that fall within the TID range.
+	 * Check if we've allocated every block in the relation, or if we've
+	 * reached the limit imposed by pbscan->phs_numblock (if set).
 	 */
 	if (nallocated >= pbscan->phs_nblocks)
-	    page = InvalidBlockNumber; /* all blocks have been allocated */
+		page = InvalidBlockNumber; /* all blocks have been allocated */
 	else if (pbscan->phs_numblock != InvalidBlockNumber &&
 			 nallocated >= pbscan->phs_numblock)
 		page = InvalidBlockNumber; /* upper scan limit reached */

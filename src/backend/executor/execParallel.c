@@ -1036,6 +1036,7 @@ ExecParallelReInitializeDSM(PlanState *planstate,
 		case T_MemoizeState:
 			/* these nodes have DSM state, but no reinitialization is required */
 			break;
+
 		default:
 			break;
 	}

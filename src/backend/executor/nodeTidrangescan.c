@@ -418,13 +418,13 @@ ExecInitTidRangeScan(TidRangeScan *node, EState *estate, int eflags)
  * ----------------------------------------------------------------
  */
 void
-ExecTidRangeScanEstimate(TidRangeScanState *node,
-					ParallelContext *pcxt)
+ExecTidRangeScanEstimate(TidRangeScanState *node, ParallelContext *pcxt)
 {
 	EState	   *estate = node->ss.ps.state;
 
-	node->trss_pscanlen = table_parallelscan_estimate(node->ss.ss_currentRelation,
-												  estate->es_snapshot);
+	node->trss_pscanlen =
+		table_parallelscan_estimate(node->ss.ss_currentRelation,
+									estate->es_snapshot);
 	shm_toc_estimate_chunk(&pcxt->estimator, node->trss_pscanlen);
 	shm_toc_estimate_keys(&pcxt->estimator, 1);
 }
@@ -436,8 +436,7 @@ ExecTidRangeScanEstimate(TidRangeScanState *node,
  * ----------------------------------------------------------------
  */
 void
-ExecTidRangeScanInitializeDSM(TidRangeScanState *node,
-						 ParallelContext *pcxt)
+ExecTidRangeScanInitializeDSM(TidRangeScanState *node, ParallelContext *pcxt)
 {
 	EState	   *estate = node->ss.ps.state;
 	ParallelTableScanDesc pscan;
@@ -446,8 +445,6 @@ ExecTidRangeScanInitializeDSM(TidRangeScanState *node,
 	table_parallelscan_initialize(node->ss.ss_currentRelation,
 								  pscan,
 								  estate->es_snapshot);
-	/* disable syncscan in parallel tid range scan. */
-	pscan->phs_syncscan = false;
 	shm_toc_insert(pcxt->toc, node->ss.ps.plan->plan_node_id, pscan);
 	node->ss.ss_currentScanDesc =
 		table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan);

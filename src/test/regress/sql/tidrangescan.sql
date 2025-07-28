@@ -99,33 +99,33 @@ COMMIT;
 DROP TABLE tidrangescan;
 
 -- tests for parallel tidrangescans
-SET parallel_setup_cost=0;
-SET parallel_tuple_cost=0;
-SET min_parallel_table_scan_size=0;
-SET max_parallel_workers_per_gather=4;
+SET parallel_setup_cost TO 0;
+SET parallel_tuple_cost TO 0;
+SET min_parallel_table_scan_size TO 0;
+SET max_parallel_workers_per_gather TO 4;
 
-CREATE TABLE parallel_tidrangescan(id integer, data text) WITH (fillfactor=10);
+CREATE TABLE parallel_tidrangescan(id integer, data text) WITH (fillfactor = 10);
 
 -- insert enough tuples such that each page gets 5 tuples with fillfactor = 10
-INSERT INTO parallel_tidrangescan SELECT i,repeat('x', 100) FROM generate_series(1,200) AS s(i);
+INSERT INTO parallel_tidrangescan SELECT i, repeat('x', 100) FROM generate_series(1,200) AS s(i);
 
 -- ensure there are 40 pages for parallel test
 SELECT min(ctid), max(ctid) FROM parallel_tidrangescan;
 
 -- parallel range scans with upper bound
-EXPLAIN (costs off)
-SELECT count(*) FROM parallel_tidrangescan WHERE ctid<'(30,1)';
-SELECT count(*) FROM parallel_tidrangescan WHERE ctid<'(30,1)';
+EXPLAIN (COSTS OFF)
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid < '(30,1)';
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid < '(30,1)';
 
 -- parallel range scans with lower bound
-EXPLAIN (costs off)
-SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)';
-SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)';
+EXPLAIN (COSTS OFF)
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid > '(10,0)';
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid > '(10,0)';
 
 -- parallel range scans with both bounds
-EXPLAIN (costs off)
-SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)' AND ctid<'(30,1)';
-SELECT count(*) FROM parallel_tidrangescan WHERE ctid>'(10,0)' AND ctid<'(30,1)';
+EXPLAIN (COSTS OFF)
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid > '(10,0)' AND ctid < '(30,1)';
+SELECT count(*) FROM parallel_tidrangescan WHERE ctid > '(10,0)' AND ctid < '(30,1)';
 
 -- parallel rescans
 EXPLAIN (COSTS OFF)

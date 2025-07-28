@@ -1366,9 +1366,9 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 {
 	Selectivity selectivity;
 	double		pages;
-	Cost		startup_cost = 0;
-	Cost		cpu_run_cost = 0;
-	Cost		disk_run_cost = 0;
+	Cost		startup_cost;
+	Cost		cpu_run_cost;
+	Cost		disk_run_cost;
 	QualCost	qpqual_cost;
 	Cost		cpu_per_tuple;
 	QualCost	tid_qual_cost;
@@ -1414,7 +1414,7 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 							  &spc_seq_page_cost);
 
 	/* disk costs; 1 random page and the remainder as seq pages */
-	disk_run_cost += spc_random_page_cost + spc_seq_page_cost * nseqpages;
+	disk_run_cost = spc_random_page_cost + spc_seq_page_cost * nseqpages;
 
 	/* Add scanning CPU costs */
 	get_restriction_qual_cost(root, baserel, param_info, &qpqual_cost);
@@ -1422,14 +1422,14 @@ cost_tidrangescan(Path *path, PlannerInfo *root,
 	/*
 	 * XXX currently we assume TID quals are a subset of qpquals at this
 	 * point; they will be removed (if possible) when we create the plan, so
-	 * we subtract their cost from the total qpqual cost. (If the TID quals
+	 * we subtract their cost from the total qpqual cost.  (If the TID quals
 	 * can't be removed, this is a mistake and we're going to underestimate
 	 * the CPU cost a bit.)
 	 */
-	startup_cost += qpqual_cost.startup + tid_qual_cost.per_tuple;
+	startup_cost = qpqual_cost.startup + tid_qual_cost.per_tuple;
 	cpu_per_tuple = cpu_tuple_cost + qpqual_cost.per_tuple -
 		tid_qual_cost.per_tuple;
-	cpu_run_cost += cpu_per_tuple * ntuples;
+	cpu_run_cost = cpu_per_tuple * ntuples;
 
 	/* tlist eval costs are paid per output row, not per tuple scanned */
 	startup_cost += path->pathtarget->cost.startup;
