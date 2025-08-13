@@ -250,9 +250,13 @@ TidRangeNext(TidRangeScanState *node)
 		}
 		else
 		{
-			/* rescan with the updated TID range */
-			table_rescan_tidrange(scandesc, &node->trss_mintid,
-								  &node->trss_maxtid);
+			/* rescan with the updated TID range only in non-parallel mode */
+			if (scandesc->rs_parallel == NULL)
+			{
+				/* rescan with the updated TID range */
+				table_rescan_tidrange(scandesc, &node->trss_mintid,
+									  &node->trss_maxtid);
+			}
 		}
 
 		node->trss_inScan = true;
@@ -446,8 +450,19 @@ ExecTidRangeScanInitializeDSM(TidRangeScanState *node, ParallelContext *pcxt)
 								  pscan,
 								  estate->es_snapshot);
 	shm_toc_insert(pcxt->toc, node->ss.ps.plan->plan_node_id, pscan);
-	node->ss.ss_currentScanDesc =
-		table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan);
+
+	/*
+	 * Initialize parallel scan descriptor with given TID range if it can be
+	 * evaluated successfully.
+	 */
+	if (TidRangeEval(node))
+		node->ss.ss_currentScanDesc =
+			table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan,
+					&node->trss_mintid, &node->trss_maxtid);
+	else
+		node->ss.ss_currentScanDesc =
+			table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan,
+					NULL, NULL);
 }
 
 /* ----------------------------------------------------------------
@@ -465,6 +480,11 @@ ExecTidRangeScanReInitializeDSM(TidRangeScanState *node,
 	pscan = node->ss.ss_currentScanDesc->rs_parallel;
 	table_parallelscan_reinitialize(node->ss.ss_currentRelation, pscan);
 
+	/* Set the new TID range if it can be evaluated successfully */
+	if (TidRangeEval(node))
+		node->ss.ss_currentRelation->rd_tableam->scan_set_tidrange(
+				node->ss.ss_currentScanDesc, &node->trss_mintid,
+				&node->trss_maxtid);
 }
 
 /* ----------------------------------------------------------------
@@ -480,6 +500,11 @@ ExecTidRangeScanInitializeWorker(TidRangeScanState *node,
 	ParallelTableScanDesc pscan;
 
 	pscan = shm_toc_lookup(pwcxt->toc, node->ss.ps.plan->plan_node_id, false);
+
+	/*
+	 * As a worker, there is no need to set TID range as it has already been set
+	 * by the leader and available in shared memory.
+	 */
 	node->ss.ss_currentScanDesc =
-		table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan);
+		table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan, NULL, NULL);
 }

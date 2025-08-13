@@ -1133,7 +1133,9 @@ extern TableScanDesc table_beginscan_parallel(Relation relation,
  * Caller must hold a suitable lock on the relation.
  */
 extern TableScanDesc table_beginscan_parallel_tidrange(Relation relation,
-													   ParallelTableScanDesc pscan);
+													   ParallelTableScanDesc pscan,
+													   ItemPointerData * mintid,
+													   ItemPointerData * maxtid);
 
 /*
  * Restart a parallel scan.  Call this in the leader process.  Caller is

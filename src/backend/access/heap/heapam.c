@@ -492,11 +492,6 @@ heap_setscanlimits(TableScanDesc sscan, BlockNumber startBlk, BlockNumber numBlk
 	scan->rs_numblocks = numBlks;
 
 	/* set the limits in the ParallelBlockTableScanDesc, when present */
-
-	/*
-	 * XXX no lock is being taken here.  What guarantees are there that there
-	 * isn't some worker using the old limits when the new limits are imposed?
-	 */
 	if (scan->rs_base.rs_parallel != NULL)
 	{
 		ParallelBlockTableScanDesc bpscan;
