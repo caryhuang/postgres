@@ -485,6 +485,9 @@ ExecTidRangeScanReInitializeDSM(TidRangeScanState *node,
 		node->ss.ss_currentRelation->rd_tableam->scan_set_tidrange(
 				node->ss.ss_currentScanDesc, &node->trss_mintid,
 				&node->trss_maxtid);
+	else
+		node->ss.ss_currentRelation->rd_tableam->scan_set_tidrange(
+					node->ss.ss_currentScanDesc, NULL, NULL);
 }
 
 /* ----------------------------------------------------------------
@@ -501,10 +504,12 @@ ExecTidRangeScanInitializeWorker(TidRangeScanState *node,
 
 	pscan = shm_toc_lookup(pwcxt->toc, node->ss.ps.plan->plan_node_id, false);
 
-	/*
-	 * As a worker, there is no need to set TID range as it has already been set
-	 * by the leader and available in shared memory.
-	 */
-	node->ss.ss_currentScanDesc =
-		table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan, NULL, NULL);
+	if (TidRangeEval(node))
+		node->ss.ss_currentScanDesc =
+			table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan,
+					&node->trss_mintid, &node->trss_maxtid);
+	else
+		node->ss.ss_currentScanDesc =
+			table_beginscan_parallel_tidrange(node->ss.ss_currentRelation, pscan,
+					NULL, NULL);
 }
